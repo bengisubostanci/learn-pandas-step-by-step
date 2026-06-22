@@ -1,0 +1,104 @@
+# 🛠️ Veri Tipi Dönüşümleri, Eksik Veri Yönetimi ve iloc
+
+Gerçek hayat veri setleri çoğunlukla kirli gelir. Sütunların veri tipleri yanlış tanımlanmış olabilir veya veri setinde kayıp/boş veriler (Null/NaN) bulunabilir. Bu bölümde `astype()` ile tip dönüşümünü, `isnull()` ile eksik veri tespitini, `dropna()` ile veri temizlemeyi ve `iloc` yöntemiyle indeks tabanlı veri seçmeyi öğreneceğiz.
+
+---
+
+## 1. Veriyi Yükleme ve Genel Bakış
+Analizimizde popüler bir e-ticaret veri seti olan **Online Retail II** veri setinin bir kısmını kullanacağız:
+
+```python
+import pandas as pd
+
+# Veri setini indirme (Notebook / Terminal komutu)
+# !wget [https://github.com/erkansirin78/datasets/raw/master/OnlineRetail2.csv](https://github.com/erkansirin78/datasets/raw/master/OnlineRetail2.csv)
+
+# Veriyi okuma
+df = pd.read_csv("OnlineRetail2.csv")
+df.head(3)
+
+# 🛠️ Veri Tipi Dönüşümleri, Eksik Veri Yönetimi ve iloc
+
+Gerçek hayat veri setleri çoğunlukla kirli gelir. Sütunların veri tipleri yanlış tanımlanmış olabilir veya veri setinde kayıp/boş veriler (Null/NaN) bulunabilir. Bu bölümde `astype()` ile tip dönüşümünü, `isnull()` ile eksik veri tespitini, `dropna()` ile veri temizlemeyi ve `iloc` yöntemiyle indeks tabanlı veri seçmeyi öğreneceğiz.
+
+---
+
+## 1. Veriyi Yükleme ve Genel Bakış
+Analizimizde popüler bir e-ticaret veri seti olan **Online Retail II** veri setinin bir kısmını kullanacağız:
+
+```python
+import pandas as pd
+
+# Veri setini indirme (Notebook / Terminal komutu)
+# !wget [https://github.com/erkansirin78/datasets/raw/master/OnlineRetail2.csv](https://github.com/erkansirin78/datasets/raw/master/OnlineRetail2.csv)
+
+# Veriyi okuma
+df = pd.read_csv("OnlineRetail2.csv")
+
+,InvoiceNo,StockCode,Description,Quantity,InvoiceDate,UnitPrice,CustomerID,Country
+0,536365,85123A,WHITE HANGING HEART T-LIGHT HOLDER,6,2010-12-01 08:26:00,2.55,17850.0,United Kingdom
+1,536365,71053,WHITE METAL LANTERN,6,2010-12-01 08:26:00,3.39,17850.0,United Kingdom
+2,536365,84406B,CREAM CUPID HEARTS COAT HANGER,8,2010-12-01 08:26:00,2.75,17850.0,United Kingdom
+Kaynaklar
+https://segmentfault.com/a/1190000041181131
+
+2. astype() ile Veri Tipi Dönüşümü (Type Casting)
+Veriyi ilk okuduğumuzda df.info() çıktısını incelediğimizde CustomerID sütununun sayısal (float64) olarak algılandığını görürüz. Ancak müşteri id'leri üzerinde matematiksel işlemler (toplama, ortalama vb.) yapılmayacağı için bu sütunun metinsel (object / str) olması daha doğrudur.
+# Sütunun tipini string (metin) formatına dönüştürme
+df['CustomerID'] = df['CustomerID'].astype('str')
+
+# Kontrol edelim
+print(df['CustomerID'].dtype)
+# Çıktı: object
+
+3. Eksik Veri (Null / NaN) Yönetimi
+A) Sütun Bazında Eksik Veri Kontrolü (isnull().sum())
+Hangi sütunda kaç adet eksik (boş) değer olduğunu toplu olarak görmek için kullanılır:
+df.isnull().sum()
+Çıktı:
+InvoiceNo         0
+StockCode         0
+Description    1454  --> 1454 satırda açıklama girilmemiş
+Quantity          0
+InvoiceDate       0
+UnitPrice         0
+CustomerID        0
+Country           0
+dtype: int64
+
+B) DataFrame Genelinde Null Kontrolü
+# Herhangi bir yerde hiç null değer var mı? (True/False)
+df.isnull().values.any() # Çıktı: True
+
+# Tüm veri setindeki toplam eksik veri sayısı
+df.isnull().values.sum() # Çıktı: 1454
+
+C) Eksik Verileri Temizleme (dropna())
+Eksik değer içeren satırları veri setinden tamamen çıkarmak için dropna() fonksiyonunu kullanırız.
+
+⚠️ Not: dropna() fonksiyonu inplace=True parametresi verilmediği sürece orijinal DataFrame'i bozmaz, geriye yeni bir DataFrame döner.
+# Satırlarında eksik veri olanları ele ve yeni bir dataframe'e ata
+df2 = df.dropna()
+
+# Kontrol
+df2.isnull().sum().sum() # Çıktı: 0 (Temizlendi)
+df.isnull().sum().sum()  # Çıktı: 1454 (Orijinal veri seti aynen duruyor)
+
+4. iloc ile İndeks Tabanlı Sütun ve Satır Seçimi
+iloc (integer location), sütun veya satır isimlerine bakmaksızın tamamen indeks numaralarına (0, 1, 2...) odaklanarak veri seçimi yapmayı sağlar. Kullanım kalıbı df.iloc[satır_indeksleri, sütun_indeksleri] şeklindedir.
+
+A) Belirli Sütunları Seçmek
+Tüm satırları (:) alıp sadece 0, 5 ve 7. sıradaki sütunları (InvoiceNo, UnitPrice, Country) seçelim:
+df.iloc[:, [0, 5, 7]].head()
+Çıktı:
+| | InvoiceNo | UnitPrice | Country |
+|---|---|---|
+| 0 | 536365 | 2.55 | United Kingdom |
+| 1 | 536365 | 3.39 | United Kingdom |
+B) Belirli Satır Aralığını Seçmek (Slicing)
+satırdan 26. satıra kadar olan verileri ve tüm sütunları seçelim:
+,InvoiceNo,StockCode,Description,Quantity,InvoiceDate,UnitPrice,CustomerID,Country
+15,536367,22623,BOX OF VINTAGE JIGSAW BLOCKS,3,2010-12-01 08:34:00,4.95,13047.0,United Kingdom
+16,536367,22622,BOX OF VINTAGE ALPHABET BLOCKS,2,2010-12-01 08:34:00,9.95,13047.0,United Kingdom
+df.head(3)
+
