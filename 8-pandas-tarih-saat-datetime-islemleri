@@ -1,0 +1,65 @@
+# ⏳ Pandas ile Tarih-Saat (Datetime) İşlemleri ve Zaman Serisi Giriş
+
+Veri analitiğinde zaman parametresi (tarih, saat, yıl vb.) kritik bir özniteliktir. Pandas kütüphanesi, metin olarak gelen tarih bilgilerini gerçek birer `datetime64` nesnesine dönüştürmek, bu verileri indeks olarak atamak ve zaman tabanlı yeni nitelikler türetmek için son derece gelişmiş araçlar sunar.
+
+---
+
+## 1. Veriyi Okurken Zaman İndeksi (DatetimeIndex) Tanımlama
+
+Veri setini okurken zaman barındıran sütunu doğrudan indeks yapabilir ve metin formatından tarih formatına (`parse_dates`) dönüştürebiliriz:
+
+```python
+import pandas as pd
+
+# Okuma esnasında 'InvoiceDate' sütununu hem datetime formatına çeviriyoruz hem de indeks yapıyoruz
+df = pd.read_csv("OnlineRetail2.csv", index_col="InvoiceDate", parse_dates=['InvoiceDate'])
+df.head(2)
+
+Verinin Yapısı (df.info()):
+<class 'pandas.core.frame.DataFrame'>
+DatetimeIndex: 541909 entries, 2010-12-01 08:26:00 to 2011-12-09 12:50:00
+Data columns (total 7 columns):
+ #   Column       Non-Null Count   Dtype  
+---  ------       --------------   -----  
+  ...
+dtypes: float64(2), int64(1), object(4)
+💡 Avantaj: İndeksin tipi DatetimeIndex olduğunda, zaman tabanlı filtrelemeler ve sıralamalar çok daha hızlı ve performanslı çalışır.
+
+📌 Zaman İndeksine Göre Sıralama (sort_index)
+Zaman serisi analizlerinde verinin kronolojik sırada olması şarttır. İndekse göre sıralamak için:
+df = df.sort_index()
+
+📌 Zaman İndeksinden Bilgi Türetme
+İndeks bir DatetimeIndex olduğunda .index.year, .index.month, .index.day_name() gibi özniteliklerle doğrudan yeni sütunlar üretebiliriz:
+# Doğrudan indeks bilgisinden yıl sütunu türetme
+df['year'] = df.index.year
+
+2. Standart Sütun Üzerinde Datetime İşlemleri (pd.to_datetime)
+Eğer zaman bilgisini indeks yapmak istemiyor, standart bir sütun olarak tutmak istiyorsak pd.to_datetime() fonksiyonunu kullanırız.
+df2 = pd.read_csv("OnlineRetail2.csv")
+
+# object (string) olan veri tipini datetime64 tipine dönüştürme
+df2['InvoiceDate2'] = pd.to_datetime(df2['InvoiceDate'])
+📌 Standart Sütundan Bilgi Türetme (.dt Aksesuvarı)
+Eğer veri indeks değil de standart bir sütun ise, tarih parçalama işlemlerini yaparken araya .dt ifadesini koymamız gerekir:
+# Standart sütundan ay bilgisini çekme
+df2['month'] = df2['InvoiceDate2'].dt.month
+
+3. İki Tarih Arasındaki Zaman Farkını Hesaplama
+Pandas ortamında iki datetime64 sütunu birbirinden çıkarıldığında geriye timedelta tipinde bir fark objesi kalır. Bu farkı saniye, dakika veya gün cinsinden sayısal bir değere dönüştürmek için NumPy'ın timedelta64 fonksiyonundan yararlanırız.
+
+import numpy as np
+
+# Örnek senaryo: İki tarih arasındaki farkı saniye cinsine dönüştürme
+df2['seconds_diff'] = (df2['InvoiceDate2'] - df2['InvoiceDate2']) / np.timedelta64(1, 's')
+df2[['InvoiceDate2', 'seconds_diff']].head(3)
+,InvoiceDate2,seconds_diff
+0,2010-12-01 08:26:00,0.0
+1,2010-12-01 08:26:00,0.0
+
+
+4. Zaman İndeksini Sıfırlamak (reset_index)
+Eğer DatetimeIndex yapısından çıkıp, tarih bilgisini tekrar normal bir sütun haline getirmek ve satırları 0, 1, 2... şeklinde numaralandırmak istersek reset_index() metodunu kullanırız:
+# İndeksi normal sütuna dönüştürür, eski indeks 'index' adıyla sütun olur
+df_resetted = df2.reset_index()
+df_resetted.head(2)
