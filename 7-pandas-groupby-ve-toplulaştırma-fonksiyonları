@@ -1,0 +1,75 @@
+# 📊 Pandas ile Gruplama (GroupBy) ve Toplulaştırma (Aggregation)
+
+Büyük veri setlerini anlamlandırmanın en etkili yolu, verileri belirli kategorilere göre gruplayıp (`groupby`) üzerlerinde istatistiksel özetler (`mean`, `sum`, `count` vb.) üretmektir. Bu bölümde tekli/çoklu sütun gruplamayı, `agg()` fonksiyonunun esnek kullanımını ve gruplama sonrası oluşan **MultiIndex (Çoklu İndeks)** yapılarında sıralama yapmayı öğreneceğiz.
+
+---
+
+## 1. Temel Gruplama ve `agg()` Fonksiyonu
+
+Pandas'ta veriyi bir kategoriye göre gruplayıp, belirli bir sayısal sütunun özetini çıkarmak için en esnek yöntem `.agg()` fonksiyonunu kullanmaktır.
+
+### A) Tek Sütun Üzerinde Tek Fonksiyon
+Meslek gruplarına göre ortalama aylık geliri hesaplayalım:
+
+```python
+import pandas as pd
+
+df = pd.read_csv("simple_data.csv")
+
+# Meslek bazında grupla ve aylık gelirin ortalamasını (mean) al
+meslek_grpby = df.groupby(['meslek'])['aylik_gelir'].agg(['mean'])
+
+💡 İpucu: Gruplama yapıldığında, grupladığımız sütun (meslek) otomatik olarak yeni DataFrame'in indeksi olur. Bunu normal bir sütuna dönüştürmek için reset_index() kullanılır:
+
+meslek_grpby.reset_index(inplace=True)
+meslek_grpby.head(2)
+,meslek,mean
+0,Berber,9866.66
+1,Doktor,16125.00
+
+B) Gruplanmış Veriyi Sıralama
+Meslek gruplarını ortalama kazançlarına göre en yüksekten en düşüğe doğru sıralayalım:
+df.groupby(['meslek'])['aylik_gelir'].agg(['mean']).sort_values("mean", ascending=False)
+
+
+2. Çoklu Fonksiyon ile Toplulaştırma
+Aynı grup üzerinde birden fazla istatistiksel hesaplamayı (Örn: Ortalama, Toplam ve Satır Sayısı) aynı anda yapabilirsiniz:
+# Meslek bazında gelirin ortalamasını, toplamını ve çalışan sayısını getir
+meslek_ozet = df.groupby(['meslek'])['aylik_gelir'].agg(['mean', 'sum', 'count'])
+
+# En çok çalışanı olan meslek grubuna göre sırala
+meslek_ozet.sort_values("count", ascending=False).head(2)
+meslek,mean,sum,count
+Berber,9866.66,29600,3
+Memur,4066.66,12200,3
+
+3. Birden Fazla Nümerik Sütun Üzerinde Gruplama
+Tek bir sütun yerine, birden fazla sayısal sütunu (Örn: hem yas hem aylik_gelir) aynı anda gruplama işlemine dahil edebilirsiniz:
+# Mesleğe göre grupla; hem yaşın hem gelirin ortalama, toplam ve adet bilgisini çıkar
+df.groupby(['meslek'])[['yas', 'aylik_gelir']].agg(['mean', 'sum', 'count']).head(2)
+
+
+4. Gelişmiş Konu: Çoklu Sütun İndeksinde (MultiIndex) Sıralama
+Birden fazla sayısal sütun ve birden fazla fonksiyon kullandığımızda, sütun başlıkları iki katmanlı bir yapıya yani MultiIndex yapısına dönüşür.
+yas                       aylik_gelir                 
+              mean   sum count          mean    sum count
+meslek                                                       
+Berber        46.0   138     3   9866.666667  29600     3
+Doktor        35.0    70     2  16125.000000  32250     2
+Bu tarz alt başlıklı yapılarda sort_values() kullanırken hata almamak için sıralama yapacağımız sütunu tuple (ana_sütun, alt_sütun) formatında belirtmemiz gerekir:
+
+# Çoklu indekste 'aylik_gelir' ana başlığının altındaki 'mean' kırılımına göre azalan sıralama
+multi_sorted = df.groupby(['meslek'])[['yas', 'aylik_gelir']].agg(['mean', 'sum', 'count']) \
+                 .sort_values(by=[('aylik_gelir', 'mean')], ascending=False)
+
+multi_sorted.head(2)
+
+,yas (mean),yas (sum),yas (count),aylik_gelir (mean),aylik_gelir (sum),aylik_gelir (count)
+Doktor,35.0,70,2,16125.0,32250,2
+Müzisyen,30.5,61,2,10500.0,21000,2
+
+📌 Hatırlatma: Çoklu Normal Sıralama
+Veriyi gruplamadan, sadece bağımsız sütunlara göre öncelikli sıralamak isterseniz liste halinde sütun isimlerini vermeniz yeterlidir:
+# Önce yaşa göre (büyükten küçüğe), yaşları eşitse aylık gelire göre (büyükten küçüğe) sıralar
+df.sort_values(['yas', 'aylik_gelir'], ascending=False).head(3)
+
